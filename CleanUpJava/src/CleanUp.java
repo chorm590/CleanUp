@@ -89,6 +89,8 @@ class DataWriter {
 	private long sizeOfSingleFile;
 	/**写出去的文件数量*/
 	private int amountOfFiles;
+	/**单次write的数据长度。*/
+	private final int WRITE_ONE_TIME_LEN = 128 * 1024;//256k
 	
 	private final RandomGenerator randgr;
 	
@@ -109,16 +111,20 @@ class DataWriter {
 		//write data.
 		FileOutputStream fos = null;
 		BufferedOutputStream bos = null;
-		while(counter++ < amountOfFiles) {
+		while(counter++ < amountOfFiles) {//The amount of files.
 			try {
 				fos = new FileOutputStream(new File(outputRoot + prefix + counter + "." +suffix));
 				bos = new BufferedOutputStream(fos, CleanUp.SIZE_OF_1M);
-				bos.write(randgr.getRandomCharactor(dataCodeRange, (int)sizeOfSingleFile));
+				long tmpLen = 0;
+				while(tmpLen < sizeOfSingleFile) {
+					tmpLen += WRITE_ONE_TIME_LEN;
+					bos.write(randgr.getRandomCharactor(dataCodeRange, WRITE_ONE_TIME_LEN));
+					bos.flush();
+				}
 			}catch(FileNotFoundException e) {
 				e.printStackTrace();
 				break;
 			} catch (IOException e) {
-				keepFill(counter);
 				break;
 			}finally {
 				try {
@@ -165,6 +171,8 @@ class DataWriter {
 		dataCodeRange = cr.getDataCodeRange();
 		sizeOfSingleFile = cr.getSizeOfSingleFile();
 		amountOfFiles = cr.getAmountOfFiles();
+		//当配置文件中amountOfFiles的值为-1时，则持续写，直到磁盘写满。
+		amountOfFiles = amountOfFiles == -1?Integer.MAX_VALUE:amountOfFiles;
 		if(CleanUp.DEBUGABLE)
 			System.out.println("data code range:[0," + dataCodeRange + ")"
 					+ ",amount of files: " + amountOfFiles
@@ -202,41 +210,9 @@ class DataWriter {
 		}
 		if(CleanUp.DEBUGABLE)
 			System.out.println("The last serial number in existed file:" + max);
-		amountOfFiles += max;
+		if(amountOfFiles != Integer.MAX_VALUE)
+			amountOfFiles += max;
 		return max;
-	}
-	
-	private void keepFill(int counter) {
-		if(sizeOfSingleFile < 1024/* 1k */) {
-			return;
-		}else if(sizeOfSingleFile < 1024 * 1024 /* 1m */) {
-			sizeOfSingleFile = 64 * 1024;// 64k
-		}else {
-			sizeOfSingleFile = 256 * 1024;// 256k
-		}
-		if(CleanUp.DEBUGABLE)
-			System.out.println("The new single file size in keepFill:" + sizeOfSingleFile);
-		FileOutputStream fos = null;
-		BufferedOutputStream bos = null;
-		while(true) {
-			counter++;
-			try {
-				fos = new FileOutputStream(new File(outputRoot + prefix + counter + "." + suffix));
-				bos = new BufferedOutputStream(fos);
-				bos.write(randgr.getRandomCharactor(dataCodeRange, (int)sizeOfSingleFile));
-			}catch(Exception e) {
-				break;
-			}finally {
-				try {
-					bos.flush();
-					fos.flush();
-					bos.close();
-					fos.close();
-				} catch (Exception e) {
-					break;
-				}
-			}
-		}
 	}
 	
 	private void drawWriting() {
