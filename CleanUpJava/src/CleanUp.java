@@ -90,7 +90,7 @@ class DataWriter {
 	/**写出去的文件数量*/
 	private int amountOfFiles;
 	/**单次write的数据长度。*/
-	private final int WRITE_ONE_TIME_LEN = 128 * 1024;//256k
+	private int WRITE_ONE_TIME_LEN = 128 * 1024;//128k
 	
 	private final RandomGenerator randgr;
 	
@@ -111,12 +111,17 @@ class DataWriter {
 		//write data.
 		FileOutputStream fos = null;
 		BufferedOutputStream bos = null;
-		while(counter++ < amountOfFiles) {//The amount of files.
+		while(counter < amountOfFiles) {//The amount of files.
+			if(amountOfFiles != Integer.MAX_VALUE)
+				counter++;
 			try {
 				fos = new FileOutputStream(new File(outputRoot + prefix + counter + "." +suffix));
 				bos = new BufferedOutputStream(fos, CleanUp.SIZE_OF_1M);
 				long tmpLen = 0;
 				while(tmpLen < sizeOfSingleFile) {
+					if(sizeOfSingleFile < WRITE_ONE_TIME_LEN)
+						WRITE_ONE_TIME_LEN = (int)sizeOfSingleFile;
+					
 					tmpLen += WRITE_ONE_TIME_LEN;
 					bos.write(randgr.getRandomCharactor(dataCodeRange, WRITE_ONE_TIME_LEN));
 					bos.flush();
