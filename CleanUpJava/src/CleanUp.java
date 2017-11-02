@@ -101,7 +101,7 @@ class DataWriter {
 	public void write(ConfReader cr) {
 		applyProp(cr);
 		// 组装输出路径。
-		int counter = 0;
+		long counter = 0;
 		if(appendMode)
 			counter = getCounter();
 		if(CleanUp.DEBUGABLE)
@@ -111,9 +111,11 @@ class DataWriter {
 		//write data.
 		FileOutputStream fos = null;
 		BufferedOutputStream bos = null;
-		while(counter < amountOfFiles) {//The amount of files.
-			if(amountOfFiles != Integer.MAX_VALUE)
-				counter++;
+		while(true) {
+			if(amountOfFiles != Integer.MAX_VALUE && counter >= amountOfFiles){
+				break;
+			}
+			counter++;
 			try {
 				fos = new FileOutputStream(new File(outputRoot + prefix + counter + "." +suffix));
 				bos = new BufferedOutputStream(fos, CleanUp.SIZE_OF_1M);
